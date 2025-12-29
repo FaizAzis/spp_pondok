@@ -38,55 +38,67 @@ st.markdown("""
 def format_rp(angka):
     return f"Rp {int(angka):,.0f}".replace(",", ".")
 
-# --- 2. PERSISTENT LOGIN ---
 if "auth" not in st.session_state:
     st.session_state["auth"] = False
+    st.session_state["u_role"] = None
 
+# --- 2. LOGIKA LOGIN ---
 if not st.session_state["auth"]:
-    st.write("Cek Host:", st.secrets["mysql"]["host"])
-    st.title("Sign In System")
+    st.title("Log In System")
     with st.form("login_form"):
         u = st.text_input("Username")
         p = st.text_input("Password", type="password")
-        if st.form_submit_button("Masuk"):
-            # Cek ke MySQL
+        
+        if st.form_submit_button("Masuk", use_container_width=True):
+            # Query ke database_users di Clever Cloud
             user_data = db.fetch_data(f"SELECT * FROM database_users WHERE username='{u}' AND password='{p}'")
+            
             if not user_data.empty:
+                # Simpan informasi user ke session state
                 st.session_state.update({
                     "auth": True, 
                     "u_full": user_data.iloc[0]['nama_user'], 
-                    "u_role": user_data.iloc[0]['role']
+                    "u_role": user_data.iloc[0]['role'].lower() # Simpan role dalam huruf kecil
                 })
+                st.success(f"Selamat Datang, {st.session_state['u_full']}!")
                 st.rerun()
             else:
                 st.error("Username atau Password salah")
     st.stop()
 
-# --- 3. SIDEBAR ---
+# --- 3. LOGIKA PEMBATASAN MENU (RBAC) ---
+role = st.session_state["u_role"]
+
+# Definisikan menu untuk masing-masing role
+if role == "administrator":
+    list_menu = ["Dashboard", "Master Santri", "Form Pembayaran", "Histori Transaksi", "Laporan Keuangan", "Manajemen User", "Analisis AI"]
+elif role == "bendahara":
+    list_menu = ["Dashboard", "Master Santri", "Form Pembayaran", "Histori Transaksi", "Analisis AI"]
+elif role == "pimpinan":
+    list_menu = ["Dashboard", "Laporan Keuangan", "Histori Transaksi",  "Analisis AI"]
+else:
+    st.error("Role tidak dikenali")
+    st.stop()
+
+# --- 4. SIDEBAR ---
 with st.sidebar:
     # Logo PNG
     if os.path.exists("logo.png"):
         st.image("logo.png", width=120)
     
     st.markdown("### SIM SPP Daarul Hikmah")
-    st.write(st.session_state["u_full"])
-    st.markdown(f'<div class="role-tag">{st.session_state["u_role"]}</div>', unsafe_allow_html=True)
+    st.write(f"**{st.session_state['u_full']}**")
+    st.markdown(f'<div class="role-tag">{role.upper()}</div>', unsafe_allow_html=True)
     st.divider()
     
-    # Navigasi
-    menu = st.radio("Navigasi", [
-        "Dashboard", 
-        "Master Santri", 
-        "Form Pembayaran", 
-        "Histori Transaksi", 
-        "Laporan Keuangan", 
-        "Manajemen User",
-        "Analisis AI"
-    ])
+    # Navigasi Dinamis berdasarkan list_menu
+    menu = st.radio("Navigasi", list_menu)
     
+    st.divider()
     # Tombol Logout
-    if st.button("Keluar Akun", use_container_width=True):
+    if st.button("Keluar Akun", use_container_width=True, type="secondary"):
         st.session_state["auth"] = False
+        st.session_state.clear() # Bersihkan semua data sesi
         st.rerun()
 
 # Global Data (Dipanggil setiap menu agar selalu update)
@@ -106,10 +118,10 @@ if menu == "Dashboard":
     col_filter1, col_filter2 = st.columns(2)
     with col_filter1:
         # Pilihan tahun statis agar ringan dan pasti muncul
+        sel_bln = st.selectbox("Pilih Bulan Analisis", bulan_ind, index=current_month_idx)
+    with col_filter2:
         list_tahun = [2024, 2025, 2026]
         sel_thn = st.selectbox("Pilih Tahun Analisis", list_tahun, index=1) # Default 2025
-    with col_filter2:
-        sel_bln = st.selectbox("Pilih Bulan Analisis", bulan_ind, index=current_month_idx)
     
     # --- LOGIKA PERHITUNGAN DATA ---
     jumlah_santri = len(df_master)
@@ -141,7 +153,7 @@ if menu == "Dashboard":
     col_grafik, col_status = st.columns([3, 2], gap="large")
 
     with col_grafik:
-        st.subheader(f"📊 Progress Pemenuhan SPP {sel_thn}")
+        st.subheader(f"Progress Pemenuhan SPP {sel_thn}")
         
         annual_data = []
         for bln in bulan_ind:
@@ -174,7 +186,7 @@ if menu == "Dashboard":
         st.altair_chart(chart, use_container_width=True)
 
     with col_status:
-        st.subheader(f"📋 Status: {sel_bln}")
+        st.subheader(f"Status: {sel_bln}")
         f_stat = st.segmented_control("Filter:", ["Semua", "Lunas", "Belum"], default="Semua")
         
         dash_list = []
@@ -210,7 +222,7 @@ elif menu == "Master Santri":
     st.header("Manajemen Data Master Santri")
 
     # --- COMPACT IMPORT CSV (3 KOLOM) ---
-    with st.expander("📥 Import Santri (CSV)", expanded=False):
+    with st.expander("Import Santri (CSV)", expanded=False):
         c_up, c_info = st.columns([2, 1])
         with c_up:
             up_master = st.file_uploader("Upload CSV", type=["csv"], label_visibility="collapsed", key="up_master_simple")
@@ -220,7 +232,7 @@ elif menu == "Master Santri":
         if up_master:
             try:
                 df_imp = pd.read_csv(up_master)
-                st.caption(f"📊 Terdeteksi {len(df_imp)} data santri.")
+                st.caption(f"Terdeteksi {len(df_imp)} data santri.")
                 
                 if st.button("Konfirmasi Import", use_container_width=True, type="primary"):
                     for _, r in df_imp.iterrows():
@@ -483,7 +495,7 @@ elif menu == "Form Pembayaran":
 
 # --- 10. MODUL HISTORI TRANSAKSI (Filter Berdasarkan Waktu Pembayaran) ---
 if menu == "Histori Transaksi":
-    st.markdown("### 📜 Histori Transaksi Keseluruhan")
+    st.markdown("### Histori Transaksi Keseluruhan")
     st.markdown("<p style='font-size:0.9rem; color:#64748b;'>Menampilkan aliran kas berdasarkan <b>waktu pembayaran</b>.</p>", unsafe_allow_html=True)
 
     # Filter Periode Berdasarkan Tanggal Bayar
@@ -497,11 +509,12 @@ if menu == "Histori Transaksi":
     with c2:
         if not df_payment.empty:
             df_payment['tanggal_bayar'] = pd.to_datetime(df_payment['tanggal_bayar'], errors='coerce')
-            list_tahun = sorted(df_payment['tanggal_bayar'].dt.year.dropna().unique().astype(int).tolist(), reverse=True)
-            if current_year not in list_tahun: list_tahun.insert(0, current_year)
+            tahun_db = df_payment['tanggal_bayar'].dt.year.dropna().unique().astype(int).tolist()
+            tahun_range = list(range(current_year - 3, current_year + 4))
+            list_tahun = sorted(list(set(tahun_db + tahun_range)), reverse=True)
         else:
-            list_tahun = [current_year, current_year + 1, current_year + 2]
-        sel_thn_g = st.selectbox("Tahun", list_tahun)
+            list_tahun = sorted(list(range(current_year - 3, current_year + 4)), reverse=True)
+        sel_thn_g = st.selectbox("Tahun", list_tahun, index=list_tahun.index(current_year) if current_year in list_tahun else 0)
 
     st.divider()
 
@@ -548,7 +561,7 @@ elif menu == "Laporan Keuangan":
     st.markdown("<p style='font-size:0.9rem; color:#64748b;'>Pantau status kepatuhan tahunan dan kelola riwayat transaksi.</p>", unsafe_allow_html=True)
     
     # --- FITUR IMPORT CSV (Baru) ---
-    with st.expander("📥 Import Data Transaksi dari CSV"):
+    with st.expander("Import Data Transaksi dari CSV"):
         st.info("Pastikan kolom CSV Anda urut: NIS, Nama_Santri, Tagihan_Wajib, Untuk_Bulan, Tanggal_Bayar, Nominal_Bayar, Sisa_Tagihan, Status, Keterangan")
         uploaded_file = st.file_uploader("Pilih file CSV", type=["csv"])
         
@@ -586,12 +599,15 @@ elif menu == "Laporan Keuangan":
             search_nama = st.selectbox("Pencarian Nama Santri", ["-- Pilih Nama Santri --"] + df_master['nama'].tolist(), label_visibility="collapsed")
         with c_year:
             current_year = datetime.now().year
+            tahun_standar = list(range(current_year - 3, current_year + 4))
+
             if not df_payment.empty:
-                list_thn = sorted(df_payment['tanggal_bayar'].dt.year.dropna().unique().astype(int).tolist(), reverse=True)
-                if current_year not in list_thn: list_thn.insert(0, current_year)
+                tahun_db = df_payment['tanggal_bayar'].dt.year.dropna().unique().astype(int).tolist()
+                list_thn = sorted(list(set(tahun_standar + tahun_db)), reverse=True)
             else:
-                list_thn = [current_year]
-            sel_thn_lap = st.selectbox("Tahun", list_thn, label_visibility="collapsed")
+                list_thn = sorted(tahun_standar, reverse=True)
+            default_index = list_thn.index(current_year) if current_year in list_thn else 0
+            sel_thn_lap = st.selectbox("Tahun", list_thn, index=default_index, label_visibility="collapsed")
 
     st.divider()
 
@@ -787,7 +803,7 @@ elif menu == "Manajemen User":
                 r_u = df_u.loc[idx_u]
                 
                 with st.container(border=True):
-                    st.markdown(f"##### ✏️ Update Akun: {r_u['username']}")
+                    st.markdown(f"##### Update Akun: {r_u['username']}")
                     with st.form("edit_user_final_v3"):
                         e_u1, e_u2 = st.columns(2)
                         up_u = e_u1.text_input("Username", value=r_u['username'])
@@ -806,7 +822,7 @@ elif menu == "Manajemen User":
 
 # --- 9. MODUL ANALISIS AI (Final Security Patch) ---
 elif menu == "Analisis AI":
-    st.markdown("### 🤖 ML-Powered Financial Analysis")
+    st.markdown("### ML-Powered Financial Analysis")
     
     # Inisialisasi Engine
     engine = AIEngine(df_payment, df_master)
@@ -831,7 +847,7 @@ elif menu == "Analisis AI":
             col_tabel, col_config = st.columns([3, 2], gap="medium")
             
             with col_tabel:
-                st.markdown("##### 🚩 Prediksi Profil Risiko")
+                st.markdown("#####Prediksi Profil Risiko")
                 st.data_editor(
                     analysis_result[['nama', 'risk_score', 'risk_level']].sort_values('risk_score', ascending=False),
                     column_config={
@@ -845,7 +861,7 @@ elif menu == "Analisis AI":
                 )
 
             with col_config:
-                st.markdown("##### ⚙️ Parameter & Manfaat")
+                st.markdown("##### Parameter & Manfaat")
                 new_threshold = st.slider("Ambang Batas (Threshold)", 0.0, 1.0, 0.6, 0.05)
                 engine.threshold = new_threshold
                 
