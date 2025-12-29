@@ -73,7 +73,7 @@ role = st.session_state["u_role"]
 if role == "administrator":
     list_menu = ["Dashboard", "Master Santri", "Form Pembayaran", "Histori Transaksi", "Laporan Keuangan", "Manajemen User", "Analisis AI"]
 elif role == "bendahara":
-    list_menu = ["Dashboard", "Master Santri", "Form Pembayaran", "Histori Transaksi", "Analisis AI"]
+    list_menu = ["Dashboard", "Master Santri", "Form Pembayaran", "Histori Transaksi", "Laporan Keuangan",  "Analisis AI"]
 elif role == "pimpinan":
     list_menu = ["Dashboard", "Laporan Keuangan", "Histori Transaksi",  "Analisis AI"]
 else:
