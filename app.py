@@ -193,8 +193,8 @@ if menu == "Dashboard":
         for _, s in df_master.iterrows():
             is_lunas = False
             if not df_payment.empty:
-                # Cek per santri sesuai data di database Anda
-                mask_cek = (df_payment['nis'] == s['nis']) & \
+                # prediksiper santri sesuai data di database Anda
+                mask_prediksi= (df_payment['nis'] == s['nis']) & \
                            (df_payment['untuk_bulan'] == sel_bln) & \
                            (df_payment['tanggal_bayar'].dt.year == int(sel_thn))
                 cek_bayar = df_payment[mask_cek]
@@ -372,7 +372,7 @@ elif menu == "Form Pembayaran":
             # Pencarian alokasi bulan berikutnya tetap menggunakan tahun yang dipilih
             for b in sisa_bulan:
                 # Perbaikan Filter: Tambahkan filter tahun agar tidak bentrok dengan jatah SPP tahun lalu
-                mask_cek = (df_payment['nis'] == data_utama['nis']) & \
+                mask_prediksi= (df_payment['nis'] == data_utama['nis']) & \
                            (df_payment['untuk_bulan'] == b) & \
                            (df_payment['jatuh_tempo'].str.contains(str(s_tahun_tagihan)))
                 
@@ -847,7 +847,7 @@ elif menu == "Analisis AI":
             col_tabel, col_config = st.columns([3, 2], gap="medium")
             
             with col_tabel:
-                st.markdown("#####Prediksi Profil Risiko")
+                st.markdown("##### Prediksi Profil Risiko")
                 st.data_editor(
                     analysis_result[['nama', 'risk_score', 'risk_level']].sort_values('risk_score', ascending=False),
                     column_config={
