@@ -9,7 +9,7 @@ from datetime import datetime
 from ai_engine import AIEngine
 
 
-st.write("Cek Host:", st.secrets["mysql"]["host"])
+
 # --- 1. KONFIGURASI HALAMAN & UI ---
 st.set_page_config(page_title="SIM SPP Daarul Hikmah", layout="wide")
 
@@ -43,6 +43,7 @@ if "auth" not in st.session_state:
     st.session_state["auth"] = False
 
 if not st.session_state["auth"]:
+    st.write("Cek Host:", st.secrets["mysql"]["host"])
     st.title("Sign In System")
     with st.form("login_form"):
         u = st.text_input("Username")
