@@ -8,6 +8,8 @@ import time
 from datetime import datetime
 from ai_engine import AIEngine
 
+
+st.write("Cek Host:", st.secrets["mysql"]["host"])
 # --- 1. KONFIGURASI HALAMAN & UI ---
 st.set_page_config(page_title="SIM SPP Daarul Hikmah", layout="wide")
 
