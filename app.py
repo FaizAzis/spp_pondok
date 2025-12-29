@@ -197,7 +197,7 @@ if menu == "Dashboard":
                 mask_prediksi= (df_payment['nis'] == s['nis']) & \
                            (df_payment['untuk_bulan'] == sel_bln) & \
                            (df_payment['tanggal_bayar'].dt.year == int(sel_thn))
-                cek_bayar = df_payment[mask_cek]
+                cek_bayar = df_payment[mask_prediksi]
                 # Menggunakan sisa_tagihan = 0 sesuai screenshot database Anda
                 is_lunas = not cek_bayar.empty and cek_bayar.iloc[-1]['sisa_tagihan'] == 0
             
@@ -376,7 +376,7 @@ elif menu == "Form Pembayaran":
                            (df_payment['untuk_bulan'] == b) & \
                            (df_payment['jatuh_tempo'].str.contains(str(s_tahun_tagihan)))
                 
-                cek_next = df_payment[mask_cek]
+                cek_next = df_payment[mask_prediksi]
                 if cek_next.empty or cek_next.iloc[-1]['sisa_tagihan'] > 0:
                     target_bulan_lebih = b
                     break
